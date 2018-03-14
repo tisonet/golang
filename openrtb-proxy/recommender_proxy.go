@@ -39,6 +39,7 @@ func (recommender *RecommenderProxy) Recommend(adRequest *AdRequest, response ch
 	if err != nil {
 		log.Printf("Failed to post data to Recommender %s\n", err)
 		response <- RecommenderResponse{false, nil}
+		return
 	}
 
 	body, err := ioutil.ReadAll(res.Body)

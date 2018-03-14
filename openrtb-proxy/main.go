@@ -49,7 +49,7 @@ func main() {
 	recommenderTimeoutMs, _ := strconv.Atoi(cmdline.OptionValue("recommender-timeout-ms"))
 	recommenderProxy = NewRecommenderProxy(cmdline.OptionValue("recommender-url"), recommenderTimeoutMs)
 	adrequestWriter = NewAdRequestWriter("gaussalgo22.colpirio.intra:9092,gaussalgo23.colpirio.intra:9092,gaussalgo44.colpirio.intra:9092", cmdline.OptionValue("ad-requests-topic"))
-	log.Fatal(fasthttp.ListenAndServe(":8081", HttpRouter))
+	log.Fatal(fasthttp.ListenAndServe(":8080", HttpRouter))
 }
 
 func HttpRouter(ctx *fasthttp.RequestCtx)  {

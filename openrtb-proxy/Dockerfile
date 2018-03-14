@@ -16,4 +16,4 @@ RUN curl -L https://github.com/edenhill/librdkafka/archive/v${LIBRDKAFKA_VERSION
 
 RUN go get -v github.com/tisonet/golang/openrtb-proxy
 
-CMD ["/go/bin/openrtb-proxy"]
+ENTRYPOINT ["/go/bin/openrtb-proxy"]
