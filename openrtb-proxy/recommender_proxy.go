@@ -9,8 +9,7 @@ import (
 )
 
 const (
-	MaxIdleConnections int           = 20
-	RequestTimeoutMs   time.Duration = 5000 * time.Millisecond
+	MaxIdleConnections = 20
 )
 
 type RecommenderProxy struct {
@@ -23,8 +22,8 @@ type RecommenderResponse struct {
 	Response []byte
 }
 
-func NewRecommenderProxy(recommenderUrl string) *RecommenderProxy {
-	return &RecommenderProxy{recommenderUrl, createHTTPClient()}
+func NewRecommenderProxy(recommenderUrl string, recommenderTimeoutMs int) *RecommenderProxy {
+	return &RecommenderProxy{recommenderUrl, createHTTPClient(recommenderTimeoutMs)}
 }
 
 func (recommender *RecommenderProxy) Recommend(adRequest *AdRequest, response chan RecommenderResponse) {
@@ -53,12 +52,12 @@ func (recommender *RecommenderProxy) Recommend(adRequest *AdRequest, response ch
 	}
 }
 
-func createHTTPClient() *http.Client {
+func createHTTPClient(recommenderTimeoutMs int) *http.Client {
 	client := &http.Client{
 		Transport: &http.Transport{
 			MaxIdleConnsPerHost: MaxIdleConnections,
 		},
-		Timeout: RequestTimeoutMs,
+		Timeout: time.Duration(recommenderTimeoutMs)* time.Millisecond,
 	}
 
 	return client

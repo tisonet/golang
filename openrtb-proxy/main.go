@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"github.com/valyala/fasthttp"
 	"regexp"
+	"github.com/galdor/go-cmdline"
+	"os"
+	"strconv"
 )
 
 var ups *UserProfileStorage
@@ -33,10 +36,20 @@ const (
 
 func main() {
 
+	cmdline := cmdline.New()
+
+	cmdline.AddOption("u", "recommender-url", "https://recommender-static.gaussalgo.com/","Recommender server address")
+	cmdline.AddOption("o","recommender-timeout-ms", "200", "Recommender time for responding in milliseconds")
+	cmdline.AddOption("t", "ad-requests-topic", "ad_requests","Kafka topic for storing ad requests")
+
+	cmdline.Parse(os.Args)
+
+
 	ups = NewUserProfileStorage()
-	recommenderProxy = NewRecommenderProxy("https://recommender-static.gaussalgo.com/")
-	adrequestWriter = NewAdRequestWriter("gaussalgo22.colpirio.intra:9092,gaussalgo23.colpirio.intra:9092,gaussalgo44.colpirio.intra:9092", "test_ad_requests_proxy")
-	log.Fatal(fasthttp.ListenAndServe(":8080", HttpRouter))
+	recommenderTimeoutMs, _ := strconv.Atoi(cmdline.OptionValue("recommender-timeout-ms"))
+	recommenderProxy = NewRecommenderProxy(cmdline.OptionValue("recommender-url"), recommenderTimeoutMs)
+	adrequestWriter = NewAdRequestWriter("gaussalgo22.colpirio.intra:9092,gaussalgo23.colpirio.intra:9092,gaussalgo44.colpirio.intra:9092", cmdline.OptionValue("ad-requests-topic"))
+	log.Fatal(fasthttp.ListenAndServe(":8081", HttpRouter))
 }
 
 func HttpRouter(ctx *fasthttp.RequestCtx)  {
