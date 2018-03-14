@@ -22,9 +22,9 @@ type UserTargeting struct {
 	TargetedShopsCount               map[interface{}]interface{}
 }
 
-func NewUserProfileStorage() *UserProfileStorage {
+func NewUserProfileStorage(aerospikeHost string) *UserProfileStorage {
 
-	client, err := NewClient("gaussalgo9", 3000)
+	client, err := NewClient(aerospikeHost, 3000)
 
 	if err != nil {
 		log.Fatal(err)
