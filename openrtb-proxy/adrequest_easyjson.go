@@ -17,7 +17,7 @@ var (
 	_ easyjson.Marshaler
 )
 
-func easyjson7d2dc320DecodeGitCognitoCzGaussGa2502GolangOpenrtbProxy(in *jlexer.Lexer, out *AdRequestPosition) {
+func easyjson7d2dc320DecodeGithubComTisonetGolangOpenrtbProxy(in *jlexer.Lexer, out *AdRequestPosition) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -43,9 +43,9 @@ func easyjson7d2dc320DecodeGitCognitoCzGaussGa2502GolangOpenrtbProxy(in *jlexer.
 		case "positionId":
 			out.PositionId = string(in.String())
 		case "width":
-			out.Width = string(in.String())
+			out.Width = int(in.Int())
 		case "height":
-			out.Height = string(in.String())
+			out.Height = int(in.Int())
 		default:
 			in.SkipRecursive()
 		}
@@ -56,7 +56,7 @@ func easyjson7d2dc320DecodeGitCognitoCzGaussGa2502GolangOpenrtbProxy(in *jlexer.
 		in.Consumed()
 	}
 }
-func easyjson7d2dc320EncodeGitCognitoCzGaussGa2502GolangOpenrtbProxy(out *jwriter.Writer, in AdRequestPosition) {
+func easyjson7d2dc320EncodeGithubComTisonetGolangOpenrtbProxy(out *jwriter.Writer, in AdRequestPosition) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -98,7 +98,7 @@ func easyjson7d2dc320EncodeGitCognitoCzGaussGa2502GolangOpenrtbProxy(out *jwrite
 		} else {
 			out.RawString(prefix)
 		}
-		out.String(string(in.Width))
+		out.Int(int(in.Width))
 	}
 	{
 		const prefix string = ",\"height\":"
@@ -108,7 +108,7 @@ func easyjson7d2dc320EncodeGitCognitoCzGaussGa2502GolangOpenrtbProxy(out *jwrite
 		} else {
 			out.RawString(prefix)
 		}
-		out.String(string(in.Height))
+		out.Int(int(in.Height))
 	}
 	out.RawByte('}')
 }
@@ -116,27 +116,27 @@ func easyjson7d2dc320EncodeGitCognitoCzGaussGa2502GolangOpenrtbProxy(out *jwrite
 // MarshalJSON supports json.Marshaler interface
 func (v AdRequestPosition) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7d2dc320EncodeGitCognitoCzGaussGa2502GolangOpenrtbProxy(&w, v)
+	easyjson7d2dc320EncodeGithubComTisonetGolangOpenrtbProxy(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v AdRequestPosition) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7d2dc320EncodeGitCognitoCzGaussGa2502GolangOpenrtbProxy(w, v)
+	easyjson7d2dc320EncodeGithubComTisonetGolangOpenrtbProxy(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *AdRequestPosition) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7d2dc320DecodeGitCognitoCzGaussGa2502GolangOpenrtbProxy(&r, v)
+	easyjson7d2dc320DecodeGithubComTisonetGolangOpenrtbProxy(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *AdRequestPosition) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7d2dc320DecodeGitCognitoCzGaussGa2502GolangOpenrtbProxy(l, v)
+	easyjson7d2dc320DecodeGithubComTisonetGolangOpenrtbProxy(l, v)
 }
-func easyjson7d2dc320DecodeGitCognitoCzGaussGa2502GolangOpenrtbProxy1(in *jlexer.Lexer, out *AdRequest) {
+func easyjson7d2dc320DecodeGithubComTisonetGolangOpenrtbProxy1(in *jlexer.Lexer, out *AdRequest) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -202,7 +202,7 @@ func easyjson7d2dc320DecodeGitCognitoCzGaussGa2502GolangOpenrtbProxy1(in *jlexer
 		in.Consumed()
 	}
 }
-func easyjson7d2dc320EncodeGitCognitoCzGaussGa2502GolangOpenrtbProxy1(out *jwriter.Writer, in AdRequest) {
+func easyjson7d2dc320EncodeGithubComTisonetGolangOpenrtbProxy1(out *jwriter.Writer, in AdRequest) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -303,23 +303,23 @@ func easyjson7d2dc320EncodeGitCognitoCzGaussGa2502GolangOpenrtbProxy1(out *jwrit
 // MarshalJSON supports json.Marshaler interface
 func (v AdRequest) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7d2dc320EncodeGitCognitoCzGaussGa2502GolangOpenrtbProxy1(&w, v)
+	easyjson7d2dc320EncodeGithubComTisonetGolangOpenrtbProxy1(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v AdRequest) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7d2dc320EncodeGitCognitoCzGaussGa2502GolangOpenrtbProxy1(w, v)
+	easyjson7d2dc320EncodeGithubComTisonetGolangOpenrtbProxy1(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *AdRequest) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7d2dc320DecodeGitCognitoCzGaussGa2502GolangOpenrtbProxy1(&r, v)
+	easyjson7d2dc320DecodeGithubComTisonetGolangOpenrtbProxy1(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *AdRequest) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7d2dc320DecodeGitCognitoCzGaussGa2502GolangOpenrtbProxy1(l, v)
+	easyjson7d2dc320DecodeGithubComTisonetGolangOpenrtbProxy1(l, v)
 }

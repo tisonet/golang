@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/confluentinc/confluent-kafka-go/kafka"
-	"strconv"
 	"time"
 	"log"
 )
@@ -83,21 +82,11 @@ func (writer *AdRequestWriter) write(request *AdRequest, adResponseStatus int) {
 func NewAdRequestResponseMessage(request *AdRequest, adResponseStatus int) (*AdRequestResponseMessage) {
 	positions := make([]Position, len(request.Positions))
 	for i, p := range request.Positions {
-		width, err := strconv.Atoi(p.Width)
-		if err != nil {
-			log.Printf("Failed to convert Width to int: %s\n", p.Width)
-		}
-
-		height, err := strconv.Atoi(p.Height)
-		if err != nil {
-			log.Printf("Failed to convert Height to int: %s\n", p.Height)
-		}
-
 		positions[i] = Position{
 			p.ImpressionId,
 			p.PositionId,
-			width,
-			height,
+			p.Width,
+			p.Height,
 		}
 	}
 	return &AdRequestResponseMessage{

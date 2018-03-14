@@ -17,8 +17,8 @@ type AdRequestPosition struct {
 	ImpressionId string `json:"impression_id"`
 	ImpId        string `json:"impid"`
 	PositionId   string `json:"positionId"`
-	Width        string `json:"width"`
-	Height       string `json:"height"`
+	Width        int `json:"width"`
+	Height       int `json:"height"`
 }
 
 func (adRequest *AdRequest) isValid() bool {
@@ -35,5 +35,5 @@ func (adRequest *AdRequest) hasValidPositions() bool {
 }
 
 func (adRequestPosition *AdRequestPosition) isValid() bool {
-	return (adRequestPosition.ImpressionId != "") && (adRequestPosition.ImpId != "") && (adRequestPosition.Width != "") && (adRequestPosition.Height != "")
+	return (adRequestPosition.ImpressionId != "") && (adRequestPosition.ImpId != "") && (adRequestPosition.Width > 0) && (adRequestPosition.Height > 0)
 }
