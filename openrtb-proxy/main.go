@@ -1,21 +1,15 @@
 package main
 
 import (
-	"fmt"
-	"html"
 	"log"
-	"net/http"
 	"github.com/valyala/fasthttp"
-	"regexp"
 	"github.com/galdor/go-cmdline"
 	"os"
 	"strconv"
+	"gopkg.in/alexcesaro/statsd.v2"
 )
 
-var ups *UserProfileStorage
-var recommenderProxy *RecommenderProxy
-var adrequestWriter *AdRequestWriter
-var IbbidToUserIdRegex = regexp.MustCompile(`^BBID-[\d]+-(?P<userId>[\d]+)$`)
+var ibbHandler *IbbHandler
 
 const (
 	UNKNOWN                 = 0
@@ -42,80 +36,33 @@ func main() {
 	cmdline.AddOption("t", "ad-requests-topic", "ad_requests", "Kafka topic for storing ad requests")
 	cmdline.AddOption("a", "aerospike-host", "gaussalgo9.colpirio.intra", "Aerospike hostname")
 	cmdline.AddOption("k", "kafka-hosts", "gaussalgo22.colpirio.intra:9092,gaussalgo23.colpirio.intra:9092,gaussalgo44.colpirio.intra:9092", "Kafka brokers hostnames")
-
+	cmdline.AddOption("s", "statsd-server", "statsd.marathon.mesos", "Statsd server addres")
 	cmdline.Parse(os.Args)
 
-	ups = NewUserProfileStorage(cmdline.OptionValue("aerospike-host"))
+	statsDClient, err := statsd.New(statsd.Address( cmdline.OptionValue("statsd-server")))
+	if err != nil {
+		log.Fatalf("Cant connect to statsD server %s\n", cmdline.OptionValue("statsd-server"))
+		return
+	}
+	defer statsDClient.Close()
+
+	ups := NewUserProfileStorage(cmdline.OptionValue("aerospike-host"), statsDClient.Clone(statsd.SampleRate(0.2)))
 	recommenderTimeoutMs, _ := strconv.Atoi(cmdline.OptionValue("recommender-timeout-ms"))
-	recommenderProxy = NewRecommenderProxy(cmdline.OptionValue("recommender-url"), recommenderTimeoutMs)
-	adrequestWriter = NewAdRequestWriter(cmdline.OptionValue("kafka-hosts"), cmdline.OptionValue("ad-requests-topic"))
+	recommenderProxy := NewRecommenderProxy(cmdline.OptionValue("recommender-url"), recommenderTimeoutMs,  statsDClient.Clone(statsd.SampleRate(0.2)))
+	adrequestWriter := NewAdRequestWriter(cmdline.OptionValue("kafka-hosts"), cmdline.OptionValue("ad-requests-topic"))
+
+	ibbHandler = NewIbbHandler(ups, recommenderProxy, adrequestWriter, statsDClient.Clone(statsd.SampleRate(0.2)))
+
 	log.Fatal(fasthttp.ListenAndServe(":8080", HttpRouter))
 }
 
 func HttpRouter(ctx *fasthttp.RequestCtx) {
 	switch string(ctx.Path()) {
 	case "/":
-		IbbHandler(ctx)
+		ibbHandler.handle(ctx)
 	default:
 		ctx.Error("not found", fasthttp.StatusNotFound)
 	}
 }
 
-func Index(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
-}
 
-func IbbHandler(ctx *fasthttp.RequestCtx) {
-	adRequest := &AdRequest{}
-
-	ctx.SetContentType("application/json; charset=UTF-8")
-
-	if err := adRequest.UnmarshalJSON(ctx.PostBody()); err != nil {
-		log.Printf("Failed to parse AdRequest %s\n", err)
-
-		go adrequestWriter.write(adRequest, RCMD_FAILED)
-		ctx.SetStatusCode(fasthttp.StatusUnprocessableEntity)
-		return
-	}
-
-	if !adRequest.isValid() {
-		go adrequestWriter.write(adRequest, INVALID_AD_REQUEST)
-		ctx.SetStatusCode(fasthttp.StatusNoContent)
-		return
-	}
-
-	var userId, isValid = GetUserId(adRequest)
-	if !isValid {
-		go adrequestWriter.write(adRequest, INVALID_BBID)
-		ctx.SetStatusCode(fasthttp.StatusNoContent)
-		return
-	}
-
-	userTargetingResultChannel := make(chan UserTargetingResult)
-	go ups.GetUserTargeting(userId, userTargetingResultChannel)
-	userTargetingResult := <-userTargetingResultChannel
-
-	if userTargetingResult.IsUserTargeted {
-		recommenderResponseChannel := make(chan RecommenderResponse)
-		go recommenderProxy.Recommend(adRequest, recommenderResponseChannel)
-		recommenderResponse := <-recommenderResponseChannel
-
-		if recommenderResponse.Success {
-			ctx.Write(recommenderResponse.Response)
-		} else {
-			go adrequestWriter.write(adRequest, RCMD_FAILED)
-			ctx.SetStatusCode(fasthttp.StatusNoContent)
-		}
-	} else {
-		go adrequestWriter.write(adRequest, NOT_TARGETED_USER)
-		ctx.SetStatusCode(fasthttp.StatusNoContent)
-	}
-}
-
-func GetUserId(adRequest *AdRequest) (string, bool) {
-	parts := IbbidToUserIdRegex.FindStringSubmatch(adRequest.Ibbid)
-	if len(parts) == 2 {
-		return parts[1], true
-	}
-	return "", false
-}

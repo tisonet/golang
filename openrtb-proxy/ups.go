@@ -2,13 +2,14 @@ package main
 
 import (
 	"log"
-	. "github.com/aerospike/aerospike-client-go"
 	"time"
+	"gopkg.in/alexcesaro/statsd.v2"
 )
 
 type UserProfileStorage struct {
 	AerospikeClient *Client
 	ReadPolicy      *BasePolicy
+	statsDClient    *statsd.Client
 }
 
 type UserTargetingResult struct {
@@ -22,7 +23,7 @@ type UserTargeting struct {
 	TargetedShopsCount               map[interface{}]interface{}
 }
 
-func NewUserProfileStorage(aerospikeHost string) *UserProfileStorage {
+func NewUserProfileStorage(aerospikeHost string, statsDClient *statsd.Client) *UserProfileStorage {
 
 	client, err := NewClient(aerospikeHost, 3000)
 
@@ -38,12 +39,17 @@ func NewUserProfileStorage(aerospikeHost string) *UserProfileStorage {
 	return &UserProfileStorage{
 		AerospikeClient: client,
 		ReadPolicy:      policy,
+		statsDClient:    statsDClient,
 	}
 }
 
 func (ups *UserProfileStorage) GetUserTargeting(userId string, channel chan UserTargetingResult) {
+	ups.statsDClient.Increment("requests.ups")
 	key, err := NewKey("ups", "targ_users", userId)
+
+	timing := ups.statsDClient.NewTiming()
 	rec, err := ups.AerospikeClient.Get(ups.ReadPolicy, key)
+	timing.Send("time.requests.ups")
 
 	if err != nil {
 		log.Printf("Failed to get ups profile %s\n", err)
@@ -77,7 +83,7 @@ func (ups *UserProfileStorage) GetUserTargeting(userId string, channel chan User
 
 		channel <- UserTargetingResult{
 			IsUserTargeted: true,
-			UserTargeting: userTargeting,
+			UserTargeting:  userTargeting,
 		}
 	}
 }
