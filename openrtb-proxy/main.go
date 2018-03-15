@@ -36,7 +36,7 @@ func main() {
 	cmdline.AddOption("t", "ad-requests-topic", "ad_requests", "Kafka topic for storing ad requests")
 	cmdline.AddOption("a", "aerospike-host", "gaussalgo9.colpirio.intra", "Aerospike hostname")
 	cmdline.AddOption("k", "kafka-hosts", "gaussalgo22.colpirio.intra:9092,gaussalgo23.colpirio.intra:9092,gaussalgo44.colpirio.intra:9092", "Kafka brokers hostnames")
-	cmdline.AddOption("s", "statsd-server", "statsd.marathon.mesos", "Statsd server addres")
+	cmdline.AddOption("s", "statsd-server", "statsd.marathon.mesos:8125", "Statsd server address")
 	cmdline.Parse(os.Args)
 
 	statsDClient, err := statsd.New(statsd.Address( cmdline.OptionValue("statsd-server")))
@@ -49,9 +49,9 @@ func main() {
 	ups := NewUserProfileStorage(cmdline.OptionValue("aerospike-host"), statsDClient.Clone(statsd.SampleRate(0.2)))
 	recommenderTimeoutMs, _ := strconv.Atoi(cmdline.OptionValue("recommender-timeout-ms"))
 	recommenderProxy := NewRecommenderProxy(cmdline.OptionValue("recommender-url"), recommenderTimeoutMs,  statsDClient.Clone(statsd.SampleRate(0.2)))
-	adrequestWriter := NewAdRequestWriter(cmdline.OptionValue("kafka-hosts"), cmdline.OptionValue("ad-requests-topic"))
+	adRequestWriter := NewAdRequestWriter(cmdline.OptionValue("kafka-hosts"), cmdline.OptionValue("ad-requests-topic"))
 
-	ibbHandler = NewIbbHandler(ups, recommenderProxy, adrequestWriter, statsDClient.Clone(statsd.SampleRate(0.2)))
+	ibbHandler = NewIbbHandler(ups, recommenderProxy, adRequestWriter, statsDClient.Clone(statsd.SampleRate(0.2)))
 
 	log.Fatal(fasthttp.ListenAndServe(":8080", HttpRouter))
 }

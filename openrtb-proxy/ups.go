@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"time"
+	. "github.com/aerospike/aerospike-client-go"
 	"gopkg.in/alexcesaro/statsd.v2"
 )
 
