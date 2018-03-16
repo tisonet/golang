@@ -55,7 +55,9 @@ func main() {
 
 	log.Fatal(fasthttp.ListenAndServe(":8080", HttpRouter))
 
-	statsDClient.Close()
+	defer statsDClient.Close()
+	defer ups.Close()
+	defer adRequestWriter.Close()
 }
 
 func HttpRouter(ctx *fasthttp.RequestCtx) {

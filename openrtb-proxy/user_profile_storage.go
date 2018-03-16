@@ -103,3 +103,7 @@ func (ups *UserProfileStorage) GetUserTargeting(userId string, channel chan User
 		}
 	}
 }
+
+func (ups *UserProfileStorage) Close() {
+	ups.AerospikeClient.Close()
+}

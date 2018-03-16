@@ -79,6 +79,10 @@ func (writer *AdRequestWriter) write(request *AdRequest, adResponseStatus int) {
 	close(deliveryChan)
 }
 
+func (writer *AdRequestWriter) Close() {
+	writer.KafkaProducer.Close()
+}
+
 func NewAdRequestResponseMessage(request *AdRequest, adResponseStatus int) (*AdRequestResponseMessage) {
 	positions := make([]Position, len(request.Positions))
 	for i, p := range request.Positions {
