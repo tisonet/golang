@@ -5,6 +5,7 @@ import (
 	"time"
 	. "github.com/aerospike/aerospike-client-go"
 	"gopkg.in/alexcesaro/statsd.v2"
+	"strings"
 )
 
 type UserProfileStorage struct {
@@ -26,9 +27,15 @@ type UserTargetedStatus struct {
 	ViewedProducts                   int            `json:"viewed_products"`
 }
 
-func NewUserProfileStorage(aerospikeHost string, statsDClient *statsd.Client) *UserProfileStorage {
+func NewUserProfileStorage(aerospikeHosts string, statsDClient *statsd.Client) *UserProfileStorage {
+	hostNames := strings.Split(aerospikeHosts, ",")
 
-	client, err := NewClient(aerospikeHost, 3000)
+	var hosts []*Host
+	for _, hostname := range hostNames {
+		hosts = append(hosts,  NewHost(hostname, 3000))
+	}
+
+	client, err := NewClientWithPolicyAndHost(NewClientPolicy(), hosts...)
 
 	if err != nil {
 		log.Fatal(err)
