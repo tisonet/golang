@@ -191,7 +191,7 @@ func easyjson7d2dc320DecodeGithubComTisonetGolangOpenrtbProxy1(in *jlexer.Lexer,
 				in.Delim(']')
 			}
 		case "proxy":
-			out.Proxy = bool(in.Bool())
+			easyjson7d2dc320DecodeGithubComTisonetGolangOpenrtbProxy2(in, &out.ProxyData)
 		default:
 			in.SkipRecursive()
 		}
@@ -295,7 +295,7 @@ func easyjson7d2dc320EncodeGithubComTisonetGolangOpenrtbProxy1(out *jwriter.Writ
 		} else {
 			out.RawString(prefix)
 		}
-		out.Bool(bool(in.Proxy))
+		easyjson7d2dc320EncodeGithubComTisonetGolangOpenrtbProxy2(out, in.ProxyData)
 	}
 	out.RawByte('}')
 }
@@ -322,4 +322,180 @@ func (v *AdRequest) UnmarshalJSON(data []byte) error {
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *AdRequest) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjson7d2dc320DecodeGithubComTisonetGolangOpenrtbProxy1(l, v)
+}
+func easyjson7d2dc320DecodeGithubComTisonetGolangOpenrtbProxy2(in *jlexer.Lexer, out *ProxyData) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeString()
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
+		case "user_id":
+			out.UserId = string(in.String())
+		case "targeted_status":
+			easyjson7d2dc320DecodeGithubComTisonetGolangOpenrtbProxy3(in, &out.UserTargetedStatus)
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson7d2dc320EncodeGithubComTisonetGolangOpenrtbProxy2(out *jwriter.Writer, in ProxyData) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"user_id\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.UserId))
+	}
+	{
+		const prefix string = ",\"targeted_status\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		easyjson7d2dc320EncodeGithubComTisonetGolangOpenrtbProxy3(out, in.UserTargetedStatus)
+	}
+	out.RawByte('}')
+}
+func easyjson7d2dc320DecodeGithubComTisonetGolangOpenrtbProxy3(in *jlexer.Lexer, out *UserTargetedStatus) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeString()
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
+		case "static_campaigns":
+			out.TargetedStaticCampaignsCount = int(in.Int())
+		case "static_campaigns_ts":
+			out.TargetedStaticCampaignsTimestamp = int(in.Int())
+		case "visited_shops":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				in.Delim('{')
+				if !in.IsDelim('}') {
+					out.TargetedShops = make(map[string]int)
+				} else {
+					out.TargetedShops = nil
+				}
+				for !in.IsDelim('}') {
+					key := string(in.String())
+					in.WantColon()
+					var v4 int
+					v4 = int(in.Int())
+					(out.TargetedShops)[key] = v4
+					in.WantComma()
+				}
+				in.Delim('}')
+			}
+		case "viewed_products":
+			out.ViewedProducts = int(in.Int())
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson7d2dc320EncodeGithubComTisonetGolangOpenrtbProxy3(out *jwriter.Writer, in UserTargetedStatus) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"static_campaigns\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int(int(in.TargetedStaticCampaignsCount))
+	}
+	{
+		const prefix string = ",\"static_campaigns_ts\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int(int(in.TargetedStaticCampaignsTimestamp))
+	}
+	{
+		const prefix string = ",\"visited_shops\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		if in.TargetedShops == nil && (out.Flags&jwriter.NilMapAsEmpty) == 0 {
+			out.RawString(`null`)
+		} else {
+			out.RawByte('{')
+			v5First := true
+			for v5Name, v5Value := range in.TargetedShops {
+				if v5First {
+					v5First = false
+				} else {
+					out.RawByte(',')
+				}
+				out.String(string(v5Name))
+				out.RawByte(':')
+				out.Int(int(v5Value))
+			}
+			out.RawByte('}')
+		}
+	}
+	{
+		const prefix string = ",\"viewed_products\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int(int(in.ViewedProducts))
+	}
+	out.RawByte('}')
 }

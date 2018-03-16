@@ -12,7 +12,7 @@ var ibbidToUserIdRegex = regexp.MustCompile(`^BBID-[\d]+-(?P<userId>[\d]+)$`)
 type IbbHandler struct {
 	ups              *UserProfileStorage
 	recommenderProxy *RecommenderProxy
-	adrequestWriter  *AdRequestWriter
+	adRequestWriter  *AdRequestWriter
 	statsDClient     *statsd.Client
 }
 
@@ -22,56 +22,69 @@ func NewIbbHandler(ups *UserProfileStorage, recommenderProxy *RecommenderProxy, 
 	}
 }
 
-func (handler *IbbHandler) handle(ctx *fasthttp.RequestCtx) {
+func (handler *IbbHandler) handle(ctx *fasthttp.RequestCtx) bool {
 	handler.statsDClient.Increment("requests.ibb")
 	defer handler.statsDClient.NewTiming().Send("time.requests.ibb")
 
 	adRequest := &AdRequest{}
 
-	ctx.SetContentType("application/json; charset=UTF-8")
 
 	if err := adRequest.UnmarshalJSON(ctx.PostBody()); err != nil {
 		log.Printf("Failed to parse AdRequest %s\n", err)
-
-		go handler.adrequestWriter.write(adRequest, RCMD_FAILED)
-		ctx.SetStatusCode(fasthttp.StatusUnprocessableEntity)
-		return
+		return handler.finalizeEmptyResponse(adRequest, RCMD_FAILED, ctx)
 	}
 
 	if !adRequest.isValid() {
-		go handler.adrequestWriter.write(adRequest, INVALID_AD_REQUEST)
-		ctx.SetStatusCode(fasthttp.StatusNoContent)
-		return
+		return handler.finalizeEmptyResponse(adRequest, INVALID_AD_REQUEST, ctx)
 	}
 
 	userId, isValid := getUserId(adRequest)
 	if !isValid {
-		go handler.adrequestWriter.write(adRequest, INVALID_BBID)
-		ctx.SetStatusCode(fasthttp.StatusNoContent)
-		return
+		return handler.finalizeEmptyResponse(adRequest, INVALID_BBID, ctx)
 	}
 
-	userTargetingResultChannel := make(chan UserTargetingResult)
-	go handler.ups.GetUserTargeting(userId, userTargetingResultChannel)
-	userTargetingResult := <-userTargetingResultChannel
-
-	if userTargetingResult.IsUserTargeted {
-		recommenderResponseChannel := make(chan RecommenderResponse)
-		go handler.recommenderProxy.Recommend(adRequest, recommenderResponseChannel)
-		recommenderResponse := <-recommenderResponseChannel
-
-		if recommenderResponse.Success {
-			ctx.Write(recommenderResponse.Response)
-		} else {
-			go handler.adrequestWriter.write(adRequest, RCMD_FAILED)
-			ctx.SetStatusCode(fasthttp.StatusNoContent)
-		}
-	} else {
-		go handler.adrequestWriter.write(adRequest, NOT_TARGETED_USER)
-		ctx.SetStatusCode(fasthttp.StatusNoContent)
+	userTargetingResponse := handler.callUserProfileStorage(userId)
+	if userTargetingResponse.Error != nil {
+		log.Printf("Failed to get user targeting %s\n", userTargetingResponse.Error)
+		return handler.finalizeEmptyResponse(adRequest, RCMD_FAILED, ctx)
 	}
+
+	if !userTargetingResponse.IsUserTargeted {
+		return handler.finalizeEmptyResponse(adRequest, NOT_TARGETED_USER, ctx)
+	}
+
+	recommenderResponse := handler.callRecommender(userId, adRequest, &userTargetingResponse.UserTargetedStatus)
+	if recommenderResponse.Error != nil {
+		return handler.finalizeEmptyResponse(adRequest, RCMD_FAILED, ctx)
+	}
+
+	ctx.Write(recommenderResponse.Response)
+	return true
 }
 
+
+func (handler *IbbHandler) finalizeEmptyResponse(adRequest *AdRequest, status int, ctx *fasthttp.RequestCtx) bool {
+	go handler.adRequestWriter.write(adRequest, status)
+	ctx.SetStatusCode(fasthttp.StatusNoContent)
+
+	return false
+}
+
+func (handler *IbbHandler) callUserProfileStorage(userId string) UserTargetingResponse {
+	userTargetingResultChannel := make(chan UserTargetingResponse)
+	go handler.ups.GetUserTargeting(userId, userTargetingResultChannel)
+	response := <- userTargetingResultChannel
+	close(userTargetingResultChannel)
+	return response
+}
+
+func (handler *IbbHandler) callRecommender(userId string, adRequest *AdRequest, status *UserTargetedStatus) RecommenderResponse {
+	recommenderResponseChannel := make(chan RecommenderResponse)
+	go handler.recommenderProxy.Recommend(userId, adRequest, status, recommenderResponseChannel)
+	response := <-recommenderResponseChannel
+	close(recommenderResponseChannel)
+	return response
+}
 
 func getUserId(adRequest *AdRequest) (string, bool) {
 	parts := ibbidToUserIdRegex.FindStringSubmatch(adRequest.Ibbid)

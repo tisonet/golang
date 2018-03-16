@@ -9,7 +9,7 @@ type AdRequest struct {
 	UserAgent  string               `json:"user_agent"`
 	Source     string               `json:"source"`
 	Positions  [] AdRequestPosition `json:"positions"`
-	Proxy      bool                 `json:"proxy"`
+	ProxyData  ProxyData            `json:"proxy"`
 }
 
 //easyjson:json
@@ -17,8 +17,13 @@ type AdRequestPosition struct {
 	ImpressionId string `json:"impression_id"`
 	ImpId        string `json:"impid"`
 	PositionId   string `json:"positionId"`
-	Width        int `json:"width"`
-	Height       int `json:"height"`
+	Width        int    `json:"width"`
+	Height       int    `json:"height"`
+}
+
+type ProxyData struct {
+	UserId string `json:"user_id"`
+	UserTargetedStatus UserTargetedStatus `json:"targeted_status"`
 }
 
 func (adRequest *AdRequest) isValid() bool {

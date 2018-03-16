@@ -39,12 +39,12 @@ func main() {
 	cmdline.AddOption("s", "statsd-server", "statsd.marathon.mesos:8125", "Statsd server address")
 	cmdline.Parse(os.Args)
 
-	statsDClient, err := statsd.New(statsd.Address( cmdline.OptionValue("statsd-server")))
+	statsDClient, err := statsd.New(statsd.Address(cmdline.OptionValue("statsd-server")), statsd.Prefix("openrtb_proxy"))
 	if err != nil {
 		log.Fatalf("Cant connect to statsD server %s\n", cmdline.OptionValue("statsd-server"))
 		return
 	}
-	defer statsDClient.Close()
+
 
 	ups := NewUserProfileStorage(cmdline.OptionValue("aerospike-host"), statsDClient.Clone(statsd.SampleRate(0.2)))
 	recommenderTimeoutMs, _ := strconv.Atoi(cmdline.OptionValue("recommender-timeout-ms"))
@@ -54,11 +54,15 @@ func main() {
 	ibbHandler = NewIbbHandler(ups, recommenderProxy, adRequestWriter, statsDClient.Clone(statsd.SampleRate(0.2)))
 
 	log.Fatal(fasthttp.ListenAndServe(":8080", HttpRouter))
+
+	statsDClient.Close()
 }
 
 func HttpRouter(ctx *fasthttp.RequestCtx) {
 	switch string(ctx.Path()) {
 	case "/":
+		ctx.SetContentType("application/json; charset=UTF-8")
+
 		ibbHandler.handle(ctx)
 	default:
 		ctx.Error("not found", fasthttp.StatusNotFound)

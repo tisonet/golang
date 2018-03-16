@@ -20,7 +20,7 @@ type RecommenderProxy struct {
 }
 
 type RecommenderResponse struct {
-	Success  bool
+	Error    error
 	Response []byte
 }
 
@@ -28,22 +28,27 @@ func NewRecommenderProxy(recommenderUrl string, recommenderTimeoutMs int, statsD
 	return &RecommenderProxy{recommenderUrl, createHTTPClient(recommenderTimeoutMs), statsDClient}
 }
 
-func (recommender *RecommenderProxy) Recommend(adRequest *AdRequest, response chan RecommenderResponse) {
+func (recommender *RecommenderProxy) Recommend(userId string, adRequest *AdRequest, userTargetedStatus *UserTargetedStatus, response chan RecommenderResponse) {
 	recommender.statsDClient.Increment("requests.recommender")
-	adRequest.Proxy = true
+	adRequest.ProxyData = ProxyData{
+		UserId:userId,
+		UserTargetedStatus: *userTargetedStatus,
+	}
 
 	reqBody, err := adRequest.MarshalJSON()
 	if err != nil {
 		log.Printf("Failed to serialize AdRequest %s\n", err)
-		response <- RecommenderResponse{false, nil}
+		response <- RecommenderResponse{err, nil}
 	}
 
 	timing := recommender.statsDClient.NewTiming()
 	res, err := recommender.httpClient.Post(recommender.RecommenderUrl, "application/json; charset=utf-8", bytes.NewReader(reqBody))
 
 	if err != nil {
+		recommender.statsDClient.Increment("error.recommender")
+
 		log.Printf("Failed to post data to Recommender %s\n", err)
-		response <- RecommenderResponse{false, nil}
+		response <- RecommenderResponse{err, nil}
 		return
 	}
 
@@ -51,12 +56,11 @@ func (recommender *RecommenderProxy) Recommend(adRequest *AdRequest, response ch
 	res.Body.Close()
 	timing.Send("time.requests.recommender")
 
-
 	if err != nil {
 		log.Printf("Failed to read data from Recommender %s\n", err)
-		response <- RecommenderResponse{false, nil}
+		response <- RecommenderResponse{err, nil}
 	} else {
-		response <- RecommenderResponse{true, body}
+		response <- RecommenderResponse{nil, body}
 	}
 }
 

@@ -13,15 +13,17 @@ type UserProfileStorage struct {
 	statsDClient    *statsd.Client
 }
 
-type UserTargetingResult struct {
-	IsUserTargeted bool
-	UserTargeting  UserTargeting
+type UserTargetingResponse struct {
+	Error              error
+	IsUserTargeted     bool
+	UserTargetedStatus UserTargetedStatus
 }
 
-type UserTargeting struct {
-	TargetedStaticCampaignsCount     int
-	TargetedStaticCampaignsTimestamp int
-	TargetedShopsCount               map[interface{}]interface{}
+type UserTargetedStatus struct {
+	TargetedStaticCampaignsCount     int            `json:"static_campaigns"`
+	TargetedStaticCampaignsTimestamp int            `json:"static_campaigns_ts"`
+	TargetedShops                    map[string]int `json:"visited_shops"`
+	ViewedProducts                   int            `json:"viewed_products"`
 }
 
 func NewUserProfileStorage(aerospikeHost string, statsDClient *statsd.Client) *UserProfileStorage {
@@ -44,7 +46,7 @@ func NewUserProfileStorage(aerospikeHost string, statsDClient *statsd.Client) *U
 	}
 }
 
-func (ups *UserProfileStorage) GetUserTargeting(userId string, channel chan UserTargetingResult) {
+func (ups *UserProfileStorage) GetUserTargeting(userId string, channel chan UserTargetingResponse) {
 	ups.statsDClient.Increment("requests.ups")
 	key, err := NewKey("ups", "targ_users", userId)
 
@@ -55,36 +57,42 @@ func (ups *UserProfileStorage) GetUserTargeting(userId string, channel chan User
 	if err != nil {
 		log.Printf("Failed to get ups profile %s\n", err)
 
-		channel <- UserTargetingResult{
-			IsUserTargeted: false,
+		channel <- UserTargetingResponse{
+			Error: err,
 		}
 		return
 	}
 
 	if rec == nil {
-		channel <- UserTargetingResult{
+		channel <- UserTargetingResponse{
 			IsUserTargeted: false,
 		}
 	} else {
-		userTargeting := UserTargeting{0, 0, nil}
+		status := UserTargetedStatus{0, 0, nil, 0}
 		targetedStaticCampaignsCount, ok := rec.Bins["trg_sc"]
 		if ok {
-			userTargeting.TargetedStaticCampaignsCount = targetedStaticCampaignsCount.(int)
+			status.TargetedStaticCampaignsCount = targetedStaticCampaignsCount.(int)
 		}
 
 		targetedStaticCampaignsTimestamps, ok := rec.Bins["trg_sc_ts"]
 		if ok {
-			userTargeting.TargetedStaticCampaignsTimestamp = targetedStaticCampaignsTimestamps.(int)
+			status.TargetedStaticCampaignsTimestamp = targetedStaticCampaignsTimestamps.(int)
 		}
 
 		targetedShopsCount, ok := rec.Bins["trg_shops"]
 		if ok {
-			userTargeting.TargetedShopsCount = targetedShopsCount.(map[interface{}]interface{})
+			status.TargetedShops = make(map[string]int)
+
+			for shopId, productsCount := range targetedShopsCount.(map[interface{}]interface{}) {
+				viewedProductsCount := productsCount.(int)
+				status.TargetedShops[shopId.(string)] = viewedProductsCount
+				status.ViewedProducts += viewedProductsCount
+			}
 		}
 
-		channel <- UserTargetingResult{
-			IsUserTargeted: true,
-			UserTargeting:  userTargeting,
+		channel <- UserTargetingResponse{
+			IsUserTargeted:     true,
+			UserTargetedStatus: status,
 		}
 	}
 }
