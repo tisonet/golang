@@ -7,6 +7,7 @@ import (
 	"time"
 	"log"
 	"gopkg.in/alexcesaro/statsd.v2"
+	"github.com/valyala/fasthttp"
 )
 
 const (
@@ -22,6 +23,7 @@ type RecommenderProxy struct {
 type RecommenderResponse struct {
 	Error    error
 	Response []byte
+	StatusCode int
 }
 
 func NewRecommenderProxy(recommenderUrl string, recommenderTimeoutMs int, statsDClient *statsd.Client) *RecommenderProxy {
@@ -38,7 +40,7 @@ func (recommender *RecommenderProxy) Recommend(userId string, adRequest *AdReque
 	reqBody, err := adRequest.MarshalJSON()
 	if err != nil {
 		log.Printf("Failed to serialize AdRequest %s\n", err)
-		response <- RecommenderResponse{err, nil}
+		response <- RecommenderResponse{err, nil, fasthttp.StatusNoContent}
 	}
 
 	timing := recommender.statsDClient.NewTiming()
@@ -48,7 +50,7 @@ func (recommender *RecommenderProxy) Recommend(userId string, adRequest *AdReque
 		recommender.statsDClient.Increment("error.recommender")
 
 		log.Printf("Failed to post data to Recommender %s\n", err)
-		response <- RecommenderResponse{err, nil}
+		response <- RecommenderResponse{err, nil, fasthttp.StatusNoContent}
 		return
 	}
 
@@ -58,9 +60,9 @@ func (recommender *RecommenderProxy) Recommend(userId string, adRequest *AdReque
 
 	if err != nil {
 		log.Printf("Failed to read data from Recommender %s\n", err)
-		response <- RecommenderResponse{err, nil}
+		response <- RecommenderResponse{err, nil, fasthttp.StatusNoContent}
 	} else {
-		response <- RecommenderResponse{nil, body}
+		response <- RecommenderResponse{nil, body, fasthttp.StatusOK}
 	}
 }
 

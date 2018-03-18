@@ -54,17 +54,25 @@ func (handler *IbbHandler) handle(ctx *fasthttp.RequestCtx) bool {
 	}
 
 	recommenderResponse := handler.callRecommender(userId, adRequest, &userTargetingResponse.UserTargetedStatus)
+
 	if recommenderResponse.Error != nil {
 		return handler.finalizeEmptyResponse(adRequest, RCMD_FAILED, ctx)
 	}
 
+	if recommenderResponse.StatusCode == fasthttp.StatusNoContent {
+		return handler.finalizeEmptyResponse(adRequest, UNKNOWN, ctx)
+	}
+
 	ctx.Write(recommenderResponse.Response)
+
 	return true
 }
 
 
 func (handler *IbbHandler) finalizeEmptyResponse(adRequest *AdRequest, status int, ctx *fasthttp.RequestCtx) bool {
-	go handler.adRequestWriter.write(adRequest, status)
+	if status != UNKNOWN {
+		go handler.adRequestWriter.write(adRequest, status)
+	}
 	ctx.SetStatusCode(fasthttp.StatusNoContent)
 
 	return false
