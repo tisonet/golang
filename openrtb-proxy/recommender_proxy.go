@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"net/http"
-	"io/ioutil"
 	"time"
 	"log"
 	"gopkg.in/alexcesaro/statsd.v2"
@@ -18,6 +16,7 @@ type RecommenderProxy struct {
 	RecommenderUrl string
 	httpClient     *http.Client
 	statsDClient   *statsd.Client
+	fastHttpClient *fasthttp.Client
 }
 
 type RecommenderResponse struct {
@@ -27,7 +26,7 @@ type RecommenderResponse struct {
 }
 
 func NewRecommenderProxy(recommenderUrl string, recommenderTimeoutMs int, statsDClient *statsd.Client) *RecommenderProxy {
-	return &RecommenderProxy{recommenderUrl, createHTTPClient(recommenderTimeoutMs), statsDClient}
+	return &RecommenderProxy{recommenderUrl, createHTTPClient(recommenderTimeoutMs), statsDClient, createFastHTTPClient(recommenderTimeoutMs)}
 }
 
 func (recommender *RecommenderProxy) Recommend(userId string, adRequest *AdRequest, userTargetedStatus *UserTargetedStatus, responseChannel chan RecommenderResponse) {
@@ -45,7 +44,15 @@ func (recommender *RecommenderProxy) Recommend(userId string, adRequest *AdReque
 
 	defer recommender.statsDClient.NewTiming().Send("time.requests.recommender")
 
-	res, err := recommender.httpClient.Post(recommender.RecommenderUrl, "application/json; charset=utf-8", bytes.NewReader(reqBody))
+	req := fasthttp.AcquireRequest()
+	req.SetRequestURI(recommender.RecommenderUrl)
+	req.Header.SetMethod("POST")
+	req.Header.SetContentType("application/json; charset=utf-8")
+	req.SetBody(reqBody)
+
+	res := fasthttp.AcquireResponse()
+	err = recommender.fastHttpClient.Do(req, res)
+
 	if err != nil {
 		recommender.statsDClient.Increment("error.recommender")
 
@@ -54,20 +61,13 @@ func (recommender *RecommenderProxy) Recommend(userId string, adRequest *AdReque
 		return
 	}
 
-	if res.StatusCode == fasthttp.StatusNoContent {
+	if res.StatusCode() == fasthttp.StatusNoContent {
 		responseChannel <- RecommenderResponse{nil, nil, fasthttp.StatusNoContent}
 		return
 	}
 
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		log.Printf("Failed to read data from Recommender %s\n", err)
-		responseChannel <- createErrorResponse(err)
-	} else {
-		responseChannel <- RecommenderResponse{nil, body, fasthttp.StatusOK}
-	}
-
-	defer res.Body.Close()
+	body := res.Body()
+	responseChannel <- RecommenderResponse{nil, body, fasthttp.StatusOK}
 }
 
 func createHTTPClient(recommenderTimeoutMs int) *http.Client {
@@ -79,6 +79,13 @@ func createHTTPClient(recommenderTimeoutMs int) *http.Client {
 	}
 
 	return client
+}
+
+func createFastHTTPClient(recommenderTimeoutMs int) *fasthttp.Client {
+	return &fasthttp.Client{
+		ReadTimeout: time.Duration(recommenderTimeoutMs) * time.Millisecond,
+		DisableHeaderNamesNormalizing:true,
+	}
 }
 
 func createErrorResponse(err error) RecommenderResponse {
