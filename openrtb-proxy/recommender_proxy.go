@@ -53,6 +53,9 @@ func (recommender *RecommenderProxy) Recommend(userId string, adRequest *AdReque
 	res := fasthttp.AcquireResponse()
 	err = recommender.fastHttpClient.Do(req, res)
 
+	defer fasthttp.ReleaseRequest(req)
+	defer fasthttp.ReleaseResponse(res)
+
 	if err != nil {
 		recommender.statsDClient.Increment("error.recommender")
 
@@ -65,8 +68,8 @@ func (recommender *RecommenderProxy) Recommend(userId string, adRequest *AdReque
 		responseChannel <- RecommenderResponse{nil, nil, fasthttp.StatusNoContent}
 		return
 	}
-
 	body := res.Body()
+
 	responseChannel <- RecommenderResponse{nil, body, fasthttp.StatusOK}
 }
 
